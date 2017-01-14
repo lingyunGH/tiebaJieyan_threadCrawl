@@ -56,27 +56,7 @@ class threadsPipeline(object):
         sql1 = 'set names utf8mb4'
         tx.execute(sql1)
         try:
-        # if item['thread_id']:
-            #判断该帖子是否存在
-            tx.execute("select * from threads where thread_id='%s'"%(item['thread_id']))
-            result = tx.fetchone()
-            if result:
-                #避免重复存储
-                # log.msg("threads_id already stored in db: %s" % item, level=log.WARNING)
-                #更新帖子信息
-                args = (item['rep_num'],                       
-                        item['is_good'],
-                        item['thread_id']
-                        )
-                #sql后面
-                sql = "UPDATE threads SET rep_num='%s', is_good=%d WHERE thread_id='%s'"%args
-                # print sql
-                #执行更新操作
-                tx.execute(sql)
-                log.msg("update item : %s" % item, level=log.WARNING)
-
-            else:
-                args = (item['thread_id'],
+				args = (item['thread_id'],
                         item['title'],
                         item['author_id'],
                         item['author_name'],
@@ -90,16 +70,31 @@ class threadsPipeline(object):
                 sql = "insert into threads(thread_id,title,author_id,author_name,rep_num,thread_link,is_good,is_top,c_time) VALUES(%s,'%s','%s','%s',%d,'%s',%d,%d,'%s')"%args
                 
                 try:
+				#执行插入操作
                     tx.execute(sql)
+					log.msg("Item stored in db: %s" % item, level=log.INFO)
                 except MySQLdb.ProgrammingError, e:  
                     loger.error(e)                
                     loger.error(u'insert failed,ProgrammingError:%s'%item)
                 except MySQLdb.OperationalError,e:
                     loger.error(e)
                     loger.error(u'insert failed,OperationalError:%s'%item)
-
-                log.msg("Item stored in db: %s" % item, level=log.INFO)
-
+				except MySQLdb.DatabaseError,e:
+					loger.warning(e)
+					 #避免重复存储
+					# log.msg("threads_id already stored in db: %s" % item, level=log.WARNING)
+					#更新帖子信息
+					args = (item['rep_num'],                       
+							item['is_good'],
+							item['thread_id']
+							)
+					#sql后面
+					sql2 = "UPDATE threads SET rep_num='%s', is_good=%d WHERE thread_id='%s'"%args
+					# print sql
+					#执行更新操作
+					tx.execute(sql2)
+					log.msg("update item : %s" % item, level=log.WARNING)
+					
 
         #未爬去id，删除该item
         except KeyError:
